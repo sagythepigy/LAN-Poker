@@ -33,7 +33,7 @@ A fully-featured multiplayer Texas Hold'em poker game with web interface and sta
    ```
 2. Open your browser and navigate to:
    ```
-   http://localhost:5000
+   http://ip:5000
    ```
 3. Create a room or join an existing one
 4. Share the room ID with friends to play together
