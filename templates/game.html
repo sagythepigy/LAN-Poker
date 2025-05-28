@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            overflow-x: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        .poker-table {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1000px;
+            height: 500px;
+            background-color: #006400;
+            border-radius: 250px;
+            border: 30px solid #4a2810;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .player {
+            position: absolute;
+            width: 180px;
+            text-align: center;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.9);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            z-index: 10;
+            border: 2px solid #333;
+        }
+
+        /* Current player specific styles */
+        .player[data-my-hand="true"] {
+            position: fixed !important;
+            bottom: 180px !important;  /* Position above the controls */
+            left: 20px !important;     /* Align with controls */
+            transform: none !important; /* Remove the centering transform */
+            width: 200px !important;   /* Match approximate width of controls */
+            padding: 10px !important;
+            background-color: rgba(0,0,0,0.95);
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            z-index: 20;
+            margin-left: 0 !important; /* Remove any margins */
+        }
+
+        .player[data-my-hand="true"] .player-hand {
+            transform: scale(0.9);     /* Slightly smaller scale */
+            margin: 5px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .player[data-my-hand="true"] .card {
+            width: 60px !important;    /* Smaller card size */
+            height: 85px !important;
+            font-size: 20px !important;
+            margin: 0 2px !important;
+        }
+
+        .player[data-my-hand="true"] .player-name {
+            font-size: 18px;          /* Smaller font sizes */
+            margin-bottom: 5px;
+        }
+
+        .player[data-my-hand="true"] .player-chips,
+        .player[data-my-hand="true"] .player-bet {
+            font-size: 14px;
+            margin: 2px 0;
+        }
+
+        .hand-label {
+            font-size: 14px;          /* Smaller label */
+            margin-bottom: 3px;
+        }
+
+        .player-hand {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .card {
+            width: 60px;
+            height: 85px;
+            background-color: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: black;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            margin: 0 2px;
+            border: 2px solid #fff;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .card.red {
+            color: #d40000;
+        }
+
+        .card.face-down {
+            background: linear-gradient(45deg, #b22222 25%, #8b0000 25%, #8b0000 50%, #b22222 50%, #b22222 75%, #8b0000 75%);
+            background-size: 20px 20px;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: row;
+            gap: 5px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            z-index: 30;
+            border: 1px solid #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            width: auto;
+        }
+
+        #betAmount {
+            width: 100%;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: white;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        #controls button {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        #controls button:hover:not(:disabled) {
+            background-color: #3a3a3a;
+        }
+
+        #controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .hand-label {
+            color: #ffd700;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 18px;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Improved player name and chips display */
+        .player[data-my-hand="true"] .player-name {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+
+        .player[data-my-hand="true"] .player-chips,
+        .player[data-my-hand="true"] .player-bet {
+            font-size: 18px;
+            margin: 5px 0;
+        }
+
+        /* Adjust community cards position */
+        .community-cards {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 10px;
+            z-index: 15;
+        }
+
+        /* Adjust pot display */
+        .pot {
+            position: absolute;
+            top: 65%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0,0,0,0.8);
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 24px;
+            z-index: 15;
+        }
+
+        .player.current {
+            box-shadow: 0 0 20px #ffd700;
+            border-color: #ffd700;
+        }
+
+        .player.folded {
+            opacity: 0.5;
+        }
+
+        .player-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .player-chips, .player-bet {
+            font-size: 16px;
+            margin: 5px 0;
+            color: #ddd;
+        }
+
+        .player-bet {
+            color: #ffd700;
+        }
+
+        .pot {
+            position: absolute;
+            top: 65%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0,0,0,0.8);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 28px;
+            z-index: 5;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background-color: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            min-width: 80px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn:not(:disabled):active {
+            transform: scale(0.95);
+        }
+
+        .btn:not(:disabled)::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        .btn:not(:disabled):active::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(40, 40);
+                opacity: 0;
+            }
+        }
+
+        .bet-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .game-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 200px;
+            z-index: 40;
+        }
+
+        #connectionStatus {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 40;
+        }
+        
+        .connected {
+            background-color: #4CAF50;
+        }
+        
+        .disconnected {
+            background-color: #f44336;
+        }
+
+        .game-state {
+            position: fixed;
+            top: 50px;
+            left: 10px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .all-in-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: #ff4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        #connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            background-color: #333;
+            color: #fff;
+            z-index: 1000;
+        }
+
+        #player-count {
+            position: fixed;
+            top: 60px;
+            left: 20px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            background-color: rgba(0,0,0,0.8);
+            color: #fff;
+            z-index: 40;
+        }
+
+        #game-table {
+            position: relative;
+            width: 1600px;
+            height: 1000px;
+            margin: 0 auto;
+        }
+
+        .player-hand {
+            margin-top: 8px;
+            font-family: monospace;
+        }
+
+        .community-cards {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 15px;
+            z-index: 5;
+        }
+
+        .pot {
+            position: absolute;
+            top: 65%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0,0,0,0.8);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 28px;
+            z-index: 5;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            z-index: 1000;
+        }
+
+        #betAmount {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: none;
+            background-color: #3a3a3a;
+            color: white;
+        }
+
+        #controls button {
+            width: 120px;
+            padding: 12px;
+            margin: 5px 0;
+        }
+
+        #round-info {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 16px;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            z-index: 40;
+            font-size: 16px;
+        }
+
+        #round-result {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            z-index: 2000;
+            text-align: center;
+        }
+
+        .winner {
+            border: 2px solid gold;
+            box-shadow: 0 0 20px gold;
+        }
+
+        @keyframes celebrate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .winner {
+            border: 2px solid gold !important;
+            box-shadow: 0 0 20px gold !important;
+            animation: celebrate 1s ease-in-out infinite;
+        }
+
+        .celebration {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px;
+            animation: celebrate 1s infinite;
+        }
+
+        .round-result {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .hand-description {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes celebrate {
+            0% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-20px); }
+            100% { transform: translateX(-50%) translateY(0); }
+        }
+
+        .warning-message {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 50;
+        }
+
+        .warning-message.fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translate(-50%, -100%); }
+            to { transform: translate(-50%, 0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translate(-50%, 0); }
+            to { opacity: 0; transform: translate(-50%, -20px); }
+        }
+
+        .action-animation {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .action-animation.animate {
+            opacity: 1;
+            transform: translate(-50%, -20px);
+        }
+
+        .btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        .btn:active:not(:disabled)::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(40, 40);
+                opacity: 0;
+            }
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn:not(:disabled):active {
+            transform: scale(0.95);
+        }
+
+        .hand-label {
+            color: #ffd700;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+        
+        .player[data-my-hand="true"] .card:not(.face-down) {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            border: 2px solid #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div id="connectionStatus" class="disconnected">Disconnected</div>
+    <div class="game-state">Game State: <span id="gameState">Waiting</span></div>
+    
+    <div class="game-info">
+        <h4>Game Info</h4>
+        <p>Your Name: <span id="playerName"></span></p>
+        <p>Your Chips: <span id="playerChips">0</span></p>
+        <p>Current Bet: <span id="currentBet">0</span></p>
+        <p>Pot: <span id="potAmount">0</span></p>
+    </div>
+
+    <div id="game-container">
+        <div id="connection-status">Connecting...</div>
+        <div id="player-count"></div>
+        <div id="round-info"></div>
+        <div id="game-table">
+            <div class="poker-table">
+                <div class="community-cards" id="communityCards"></div>
+                <div class="pot" id="pot">Pot: 0</div>
+            </div>
+        </div>
+        <div id="controls">
+            <input type="number" id="betAmount" value="0" min="0" step="10">
+            <button id="raiseBtn">Raise</button>
+            <button id="callBtn">Call</button>
+            <button id="checkBtn">Check</button>
+            <button id="foldBtn">Fold</button>
+            <button id="allInBtn">All In</button>
+        </div>
+        <div id="round-result" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const roomId = window.location.pathname.split('/')[2];
+        const playerName = localStorage.getItem('playerName');
+        
+        if (!playerName) {
+            window.location.href = '/';
+        }
+        
+        document.getElementById('playerName').textContent = playerName;
+        
+        const socket = io({
+            transports: ['websocket'],
+            upgrade: false,
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            autoConnect: false  // Prevent auto-connection before we're ready
+        });
+
+        const connectionStatus = document.getElementById('connectionStatus');
+        const gameState = document.getElementById('gameState');
+        let mySid = null;
+        let isMyTurn = false;
+        let isCreator = localStorage.getItem('isCreator') === 'true';
+        let currentGameState = null;
+        
+        // Connect socket only after we have everything set up
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, connecting socket...');
+            socket.connect();
+        });
+
+        socket.on('connect', () => {
+            console.log('Socket connected');
+            connectionStatus.textContent = 'Connected';
+            connectionStatus.className = 'connected';
+            
+            // Store socket ID both in memory and localStorage
+            mySid = socket.id;
+            localStorage.setItem('mySid', mySid);
+            console.log('Connected with socket ID:', mySid);
+            
+            // Join or create room after connection
+            if (isCreator) {
+                console.log('Creating room:', roomId);
+                socket.emit('create_room', {
+                    room_id: roomId,
+                    player_name: playerName,
+                    max_players: parseInt(localStorage.getItem('maxPlayers'))
+                });
+            } else {
+                console.log('Joining room:', roomId);
+                socket.emit('join_room', {
+                    room_id: roomId,
+                    player_name: playerName
+                });
+            }
+        });
+
+        socket.on('room_created', (data) => {
+            console.log('Room created successfully:', data);
+            // After creating the room, no need to join it separately
+        });
+
+        socket.on('disconnect', () => {
+            connectionStatus.textContent = 'Disconnected - Reconnecting...';
+            connectionStatus.className = 'disconnected';
+            disableControls();
+        });
+
+        socket.on('error', (data) => {
+            alert(data.message);
+            // Redirect back to home page on error
+            window.location.href = '/';
+        });
+
+        socket.on('game_state', function(data) {
+            console.log('Received game state update');
+            console.log('Current socket ID:', socket.id);
+            console.log('Stored mySid:', mySid);
+            console.log('Game state:', data);
+            
+            // Ensure we have the correct socket ID
+            if (!mySid || mySid !== socket.id) {
+                mySid = socket.id;
+                localStorage.setItem('mySid', mySid);
+                console.log('Updated mySid to:', mySid);
+            }
+            
+            // Store the game state
+            currentGameState = data;
+            
+            // Update game display
+            updateGameDisplay(data);
+            
+            // Update player positions and cards
+            updatePlayerPositions(data.players);
+        });
+
+        function updateGameDisplay(data) {
+            // Update game phase display
+            const gameStateText = data.game_state.charAt(0).toUpperCase() + data.game_state.slice(1);
+            document.getElementById('gameState').textContent = gameStateText;
+            
+            // Update round info
+            const currentPlayerName = data.current_player ? data.players[data.current_player].name : 'None';
+            let roundInfo = `Current Turn: ${currentPlayerName}`;
+            if (data.game_state !== 'waiting' && data.game_state !== 'showdown') {
+                roundInfo += ` | Betting Round: ${data.game_state}`;
+            }
+            document.getElementById('round-info').textContent = roundInfo;
+            
+            // Update player count
+            document.getElementById('player-count').textContent = 
+                `Players: ${Object.keys(data.players).length}/${data.max_players}`;
+            
+            // Update pot and current bet
+            document.getElementById('potAmount').textContent = data.pot;
+            document.getElementById('currentBet').textContent = data.current_bet;
+            document.getElementById('pot').textContent = `Pot: ${data.pot}`;
+            
+            // Update community cards
+            updateCommunityCards(data.community_cards);
+            
+            // Update controls based on game state
+            if (data.game_state === 'showdown') {
+                handleShowdown(data);
+                disableControls();
+            } else {
+                updateControls(data);
+            }
+        }
+
+        function updateControls(gameState) {
+            // Disable all betting controls by default
+            disableControls();
+            
+            const myPlayer = gameState.players[mySid];
+            
+            // Only enable other controls if it's my turn and game is in progress
+            if (gameState.current_player === mySid && 
+                gameState.game_state !== "waiting" && 
+                gameState.game_state !== "showdown" &&
+                gameState.game_state !== "round_complete") {
+                
+                isMyTurn = true;
+                // Enable controls based on game state
+                document.getElementById('foldBtn').disabled = false;
+                document.getElementById('betAmount').disabled = false;
+                
+                // Calculate stake gap (how much more to call)
+                const stakeGap = gameState.current_bet - myPlayer.current_bet;
+                
+                // Enable/disable check button
+                if (stakeGap === 0) {
+                    document.getElementById('checkBtn').disabled = false;
+                }
+                
+                // Enable/disable call button
+                // Only enable call if there's actually a bet to call
+                if (stakeGap > 0 && stakeGap <= myPlayer.chips) {
+                    document.getElementById('callBtn').disabled = false;
+                } else {
+                    document.getElementById('callBtn').disabled = true;
+                }
+                
+                // Enable/disable raise button
+                if (myPlayer.chips > 0) {
+                    document.getElementById('raiseBtn').disabled = false;
+                    document.getElementById('allInBtn').disabled = false;
+                }
+            }
+        }
+
+        function handleShowdown(gameState) {
+            // Display winner information
+            const existingResults = document.querySelectorAll('.round-result');
+            existingResults.forEach(result => result.remove()); // Clear previous results
+            
+            const roundResult = document.createElement('div');
+            roundResult.className = 'round-result';
+            roundResult.style.display = 'block';
+            
+            // Find winners
+            const winners = Object.values(gameState.players).filter(p => p.is_winner);
+            let winnerNames = winners.map(w => w.name).join(', ');
+            let handDescription = "";
+            
+            // Get hand description if available
+            if (winners.length > 0 && winners[0].score) {
+                handDescription = getHandDescription(winners[0].score);
+            }
+            
+            // Build the announcement
+            roundResult.innerHTML = `
+                <div class="winner-announcement">
+                    <h2>Round Complete!</h2>
+                    <p>Winner: ${winnerNames}</p>
+                    <p>Hand: ${handDescription}</p>
+                    <p>Pot: ${gameState.pot}</p>
+                    <p style="margin-top: 15px; font-style: italic;">Next round starting automatically in 5 seconds...</p>
+                </div>
+            `;
+            
+            document.getElementById('game-table').appendChild(roundResult);
+
+            // Remove winner class after a delay to reset visual state
+            setTimeout(() => {
+                document.querySelectorAll('.player.winner').forEach(el => el.classList.remove('winner'));
+                document.querySelectorAll('.celebration').forEach(el => el.remove());
+            }, 4500); // Slightly before the new round starts
+        }
+
+        function getHandDescription(score) {
+            const handTypes = [
+                'High Card',
+                'One Pair',
+                'Two Pair',
+                'Three of a Kind',
+                'Straight',
+                'Flush',
+                'Full House',
+                'Four of a Kind',
+                'Straight Flush',
+                'Royal Flush'
+            ];
+            
+            const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+            
+            if (!score || score.length === 0) return 'Unknown Hand';
+            
+            const handType = handTypes[score[0]];
+            let description = handType;
+            
+            switch (score[0]) {
+                case 1: // One Pair
+                    description += ` of ${values[score[1]]}s`;
+                    break;
+                case 2: // Two Pair
+                    description += ` - ${values[score[1]]}s and ${values[score[2]]}s`;
+                    break;
+                case 3: // Three of a Kind
+                    description += ` - ${values[score[1]]}s`;
+                    break;
+                case 4: // Straight
+                    description += ` to ${values[score[1]]}`;
+                    break;
+                case 6: // Full House
+                    description += ` - ${values[score[1]]}s full of ${values[score[2]]}s`;
+                    break;
+                case 7: // Four of a Kind
+                    description += ` - ${values[score[1]]}s`;
+                    break;
+            }
+            
+            return description;
+        }
+
+        function disableControls() {
+            document.getElementById('raiseBtn').disabled = true;
+            document.getElementById('callBtn').disabled = true;
+            document.getElementById('foldBtn').disabled = true;
+            document.getElementById('checkBtn').disabled = true;
+            document.getElementById('allInBtn').disabled = true;
+            document.getElementById('betAmount').disabled = true;
+            isMyTurn = false;
+        }
+
+        // Update button click handlers
+        document.getElementById('raiseBtn').addEventListener('click', () => {
+            if (!currentGameState || currentGameState.current_player !== mySid) {
+                showWarning("It's not your turn!");
+                return;
+            }
+            
+            const amount = parseInt(document.getElementById('betAmount').value);
+            const myPlayer = currentGameState.players[mySid];
+            
+            if (!myPlayer) return;
+            
+            // Minimum raise is current bet plus the minimum raise amount (big blind or last raise)
+            const minRaiseTo = currentGameState.current_bet + currentGameState.min_raise;
+            
+            if (isNaN(amount)) {
+                showWarning('Please enter a valid raise amount');
+                return;
+            }
+            
+            if (amount <= currentGameState.current_bet) {
+                showWarning(`Raise must be greater than current bet of ${currentGameState.current_bet}`);
+                return;
+            }
+            
+            if (amount < minRaiseTo) {
+                showWarning(`Minimum raise is to ${minRaiseTo} (current bet ${currentGameState.current_bet} + previous raise ${currentGameState.min_raise})`);
+                return;
+            }
+            
+            if (amount > myPlayer.chips + myPlayer.current_bet) {
+                showWarning('Not enough chips');
+                return;
+            }
+            
+            console.log(`Raising to ${amount} (min raise: ${currentGameState.min_raise}, min total: ${minRaiseTo})`);
+            showActionAnimation('raise', amount);
+            socket.emit('player_action', { action: 'raise', amount: amount });
+            disableControls(); // Disable controls immediately after action
+        });
+
+        document.getElementById('callBtn').addEventListener('click', () => {
+            if (!currentGameState || currentGameState.current_player !== mySid) {
+                showWarning("It's not your turn!");
+                return;
+            }
+            
+            const myPlayer = currentGameState.players[mySid];
+            if (!myPlayer) return;
+            
+            const callAmount = currentGameState.current_bet - myPlayer.current_bet;
+            if (callAmount <= 0) {
+                showWarning('Nothing to call - you can check instead');
+                return;
+            }
+            
+            if (callAmount > myPlayer.chips) {
+                showWarning('Not enough chips to call');
+                return;
+            }
+            
+            showActionAnimation('call', callAmount);
+            socket.emit('player_action', { action: 'call' });
+            disableControls(); // Disable controls immediately after action
+        });
+
+        document.getElementById('checkBtn').addEventListener('click', () => {
+            if (!currentGameState || currentGameState.current_player !== mySid) {
+                showWarning("It's not your turn!");
+                return;
+            }
+            
+            const myPlayer = currentGameState.players[mySid];
+            if (!myPlayer) return;
+            
+            // Calculate stake gap
+            const stakeGap = currentGameState.current_bet - myPlayer.current_bet;
+            
+            // Validate check action
+            if (stakeGap > 0) {
+                showWarning('Cannot check - there is an active bet, must call or fold');
+                return;
+            }
+            
+            // In preflop, validate against big blind
+            if (currentGameState.game_state === "preflop" && myPlayer.current_bet < currentGameState.big_blind) {
+                showWarning('Cannot check - must at least call the big blind');
+                return;
+            }
+            
+            showActionAnimation('check');
+            socket.emit('player_action', { action: 'check' });
+            disableControls(); // Disable controls immediately after action
+        });
+
+        document.getElementById('foldBtn').addEventListener('click', () => {
+            if (!currentGameState || currentGameState.current_player !== mySid) {
+                showWarning("It's not your turn!");
+                return;
+            }
+            
+            showActionAnimation('fold');
+            socket.emit('player_action', { action: 'fold' });
+            disableControls(); // Disable controls immediately after action
+        });
+
+        document.getElementById('allInBtn').addEventListener('click', () => {
+            if (!currentGameState || currentGameState.current_player !== mySid) {
+                showWarning("It's not your turn!");
+                return;
+            }
+            
+            const myPlayer = currentGameState.players[mySid];
+            if (!myPlayer || myPlayer.chips <= 0) {
+                showWarning('No chips to go all in');
+                return;
+            }
+            
+            showActionAnimation('all in', myPlayer.chips);
+            socket.emit('player_action', { action: 'all_in' });
+            disableControls(); // Disable controls immediately after action
+        });
+
+        // Add warning message display
+        function showWarning(message) {
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'warning-message';
+            warningDiv.textContent = message;
+            document.body.appendChild(warningDiv);
+            
+            setTimeout(() => {
+                warningDiv.classList.add('fade-out');
+                setTimeout(() => warningDiv.remove(), 500);
+            }, 2000);
+        }
+
+        // Add action animation
+        function showActionAnimation(action, amount = null) {
+            const actionText = document.createElement('div');
+            actionText.className = 'action-animation';
+            actionText.textContent = amount ? `${action.toUpperCase()} ${amount}` : action.toUpperCase();
+            
+            // Find the current player's div
+            const playerDiv = document.querySelector('.player.current');
+            if (playerDiv) {
+                playerDiv.appendChild(actionText);
+                
+                // Add animation class after a small delay to trigger the animation
+                setTimeout(() => actionText.classList.add('animate'), 10);
+                
+                // Remove the element after animation completes
+                setTimeout(() => actionText.remove(), 1000);
+            }
+        }
+
+        function updatePlayerPositions(players) {
+            console.log('Updating player positions');
+            console.log('My socket ID:', mySid);
+            console.log('Available players:', players);
+            
+            const gameTable = document.getElementById('game-table');
+            // Clear existing players
+            Array.from(gameTable.getElementsByClassName('player')).forEach(player => {
+                player.remove();
+            });
+            
+            const playerEntries = Object.entries(players);
+            console.log('Total players:', playerEntries.length);
+            
+            // First, handle the current player (myself)
+            const myPlayer = players[mySid];
+            if (myPlayer) {
+                console.log('Creating my player div');
+                console.log('My player data:', myPlayer);
+                
+                const myPlayerDiv = document.createElement('div');
+                myPlayerDiv.className = 'player';
+                myPlayerDiv.dataset.id = mySid;
+                myPlayerDiv.dataset.myHand = 'true';
+                
+                // Add player state classes
+                if (myPlayer.folded) myPlayerDiv.classList.add('folded');
+                if (mySid === currentGameState.current_player) myPlayerDiv.classList.add('current');
+                if (myPlayer.is_winner) myPlayerDiv.classList.add('winner');
+                
+                // Create hand HTML
+                let handHTML = '';
+                if (myPlayer.hand && myPlayer.hand.length > 0) {
+                    handHTML = '<div class="player-hand">';
+                    myPlayer.hand.forEach(card => {
+                        if (card.hidden) {
+                            handHTML += '<div class="card face-down"></div>';
+                        } else {
+                            const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds';
+                            const suitSymbol = card.suit === 'Hearts' ? '♥' : 
+                                             card.suit === 'Diamonds' ? '♦' : 
+                                             card.suit === 'Clubs' ? '♣' : '♠';
+                            handHTML += `
+                                <div class="card ${isRed ? 'red' : 'black'}">
+                                    ${card.value}${suitSymbol}
+                                </div>
+                            `;
+                        }
+                    });
+                    handHTML += '</div>';
+                }
+                
+                // Add player info
+                myPlayerDiv.innerHTML = `
+                    <div class="hand-label">My Hand</div>
+                    <div class="player-name">${myPlayer.name}</div>
+                    <div class="player-chips">Chips: ${myPlayer.chips}</div>
+                    <div class="player-bet">Bet: ${myPlayer.current_bet}</div>
+                    ${handHTML}
+                `;
+                
+                gameTable.appendChild(myPlayerDiv);
+            } else {
+                console.warn('Could not find my player data!');
+            }
+            
+            // Handle other players
+            const otherPlayers = playerEntries.filter(([playerId]) => playerId !== mySid);
+            const numOtherPlayers = otherPlayers.length;
+            
+            if (numOtherPlayers > 0) {
+                // Always use a full 180-degree arc for consistent spacing
+                const totalAngle = 180;
+                const startAngle = -90;  // Start at -90 degrees (top of the semi-circle)
+                const radius = 250;
+                
+                otherPlayers.forEach(([playerId, player], index) => {
+                    console.log(`Creating player div for ${player.name} (${playerId})`);
+                    
+                    const playerDiv = document.createElement('div');
+                    playerDiv.className = 'player';
+                    playerDiv.dataset.id = playerId;
+                    
+                    // Add player state classes
+                    if (player.folded) playerDiv.classList.add('folded');
+                    if (playerId === currentGameState.current_player) playerDiv.classList.add('current');
+                    if (player.is_winner) playerDiv.classList.add('winner');
+                    
+                    // Calculate position
+                    const angle = startAngle + (totalAngle / (Math.max(1, numOtherPlayers - 1))) * index;
+                    const radian = (angle * Math.PI) / 180;
+                    const centerX = gameTable.offsetWidth / 2;
+                    const centerY = (gameTable.offsetHeight / 2) - 100;
+                    
+                    const x = centerX + radius * Math.cos(radian);
+                    const y = centerY + radius * Math.sin(radian);
+                    
+                    playerDiv.style.left = `${x - 100}px`;
+                    playerDiv.style.top = `${y - 75}px`;
+                    
+                    // Create hand HTML
+                    let handHTML = '';
+                    if (player.hand && player.hand.length > 0) {
+                        handHTML = '<div class="player-hand">';
+                        player.hand.forEach(card => {
+                            if (card.hidden) {
+                                handHTML += '<div class="card face-down"></div>';
+                            } else {
+                                const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds';
+                                const suitSymbol = card.suit === 'Hearts' ? '♥' : 
+                                                 card.suit === 'Diamonds' ? '♦' : 
+                                                 card.suit === 'Clubs' ? '♣' : '♠';
+                                handHTML += `
+                                    <div class="card ${isRed ? 'red' : 'black'}">
+                                        ${card.value}${suitSymbol}
+                                    </div>
+                                `;
+                            }
+                        });
+                        handHTML += '</div>';
+                    }
+                    
+                    // Add player info
+                    playerDiv.innerHTML = `
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-chips">Chips: ${player.chips}</div>
+                        <div class="player-bet">Bet: ${player.current_bet}</div>
+                        ${handHTML}
+                    `;
+                    
+                    gameTable.appendChild(playerDiv);
+                });
+            }
+        }
+
+        function updateCommunityCards(cards) {
+            const communityCardsDiv = document.getElementById('communityCards');
+            communityCardsDiv.innerHTML = '';
+            
+            cards.forEach(card => {
+                const cardDiv = document.createElement('div');
+                if (card.hidden) {
+                    cardDiv.className = 'card card-back';
+                    cardDiv.textContent = '';
+                } else {
+                    const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds';
+                    const suitSymbol = card.suit === 'Hearts' ? '♥' : 
+                                      card.suit === 'Diamonds' ? '♦' : 
+                                      card.suit === 'Clubs' ? '♣' : '♠';
+                    cardDiv.className = `card ${isRed ? 'red' : 'black'}`;
+                    cardDiv.innerHTML = `${card.value}${suitSymbol}`;
+                }
+                communityCardsDiv.appendChild(cardDiv);
+            });
+        }
+
+        // Add more robust click handling for the button
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listener to the document that will catch clicks on the button
+            document.addEventListener('click', function(event) {
+                if (event.target.id === 'start-round-btn' || event.target.closest('#start-round-btn')) {
+                    console.log("Start next round button clicked via delegation");
+                    socket.emit('start_new_round');
+                    
+                    // Show feedback that the click was registered
+                    const btn = document.getElementById('start-round-btn');
+                    const originalText = btn.textContent;
+                    btn.textContent = "Starting...";
+                    btn.style.backgroundColor = "#4CAF50";
+                    
+                    // Reset after a short delay
+                    setTimeout(function() {
+                        btn.textContent = originalText;
+                        btn.style.backgroundColor = "#ff9900";
+                    }, 1000);
+                }
+            });
+        });
+
+        // Add a socket handler for the not_enough_players event
+        socket.on('not_enough_players', function(data) {
+            // Create a notification to inform the player
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.left = '50%';
+            notification.style.transform = 'translateX(-50%)';
+            notification.style.padding = '15px 20px';
+            notification.style.backgroundColor = '#d9534f';
+            notification.style.color = 'white';
+            notification.style.borderRadius = '5px';
+            notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+            notification.style.zIndex = '9999';
+            notification.textContent = data.message || 'Not enough players to start a new round';
+            
+            // Add the notification to the document
+            document.body.appendChild(notification);
+            
+            // Remove the notification after 5 seconds
+            setTimeout(function() {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s ease';
+                setTimeout(function() {
+                    notification.remove();
+                }, 500);
+            }, 5000);
+            
+            // Update the game display to show waiting status
+            const gamePhase = document.getElementById('game-phase');
+            if (gamePhase) {
+                gamePhase.textContent = 'Waiting for players...';
+            }
+        });
+    </script>
+</body>
+</html>
